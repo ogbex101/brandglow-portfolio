@@ -1,24 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { PortfolioSections } from "@/components/portfolio-sections";
+import { getPortfolio } from "@/lib/portfolio.functions";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const portfolioQuery = () =>
+  queryOptions({ queryKey: ["portfolio"], queryFn: () => getPortfolio() });
+
 export const Route = createFileRoute("/")({
+  loader: ({ context }) => context.queryClient.ensureQueryData(portfolioQuery()),
+  head: () => ({
+    meta: [
+      { title: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
+      { name: "description", content: "Strategy, design, and marketing that closes the gap between how valuable brands are and how valuable they look." },
+      { property: "og:title", content: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
+      { property: "og:description", content: "Strategy, design, and marketing that actually converts." },
+      { property: "og:type", content: "website" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+  const { data } = useSuspenseQuery(portfolioQuery());
+  return <PortfolioSections data={data} />;
 }
