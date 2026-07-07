@@ -84,9 +84,11 @@ export function PortfolioSections({ data }: { data: Data }) {
             <p className="mb-3 text-sm uppercase tracking-widest text-primary">About</p>
             <h2 className="mb-6 text-4xl font-bold md:text-5xl">{about.headline}</h2>
             <div className="space-y-4 text-lg leading-relaxed text-muted-foreground">
-              {(about.bio ?? "").split(". ").reduce((acc: string[][], s: string, i: number) => {
+              {((about.bio ?? "").split(". ").reduce((acc: string[][], s: string, i: number) => {
                 const chunk = Math.floor(i / 3); (acc[chunk] ??= []).push(s); return acc;
-              }, []).map((chunk, i) => (<p key={i}>{chunk.join(". ")}{i > 0 ? "" : ""}</p>))}
+              }, [] as string[][]) as string[][]).map((chunk: string[], i: number) => (
+                <p key={i}>{chunk.join(". ")}</p>
+              ))}
             </div>
             {about.pull_quote && (
               <blockquote className="mt-8 border-l-4 border-primary pl-6 text-2xl font-display italic text-foreground">
