@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
       { title: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
       { name: "description", content: "Strategy, design, and marketing that closes the gap between how valuable brands are and how valuable they look." },
       { property: "og:title", content: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
-      { property: "og:description", content: "Strategy, design, and marketing that actually converts." },
+      { property: "og:description", content: "Strategy, design, and marketing that closes the gap between how valuable brands are and how valuable they look." },
       { property: "og:type", content: "website" },
     ],
   }),
