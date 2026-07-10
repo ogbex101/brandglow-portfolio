@@ -105,3 +105,22 @@
   padding-top: 5rem;
   padding-bottom: 5rem;
 }
+
+@utility media-hover {
+  overflow: hidden;
+  & img, & video {
+    transition: transform 700ms cubic-bezier(.22,1,.36,1), filter 400ms ease;
+  }
+  &:hover img, &:hover video {
+    transform: scale(1.05);
+    filter: brightness(1.08) contrast(1.03);
+  }
+}
+
+@utility card-lift {
+  transition: transform 400ms cubic-bezier(.22,1,.36,1), box-shadow 400ms ease, border-color 400ms ease;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elegant), var(--shadow-glow);
+  }
+}

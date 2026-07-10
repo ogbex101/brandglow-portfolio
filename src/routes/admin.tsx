@@ -1,12 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { scrapeProject } from "@/lib/scrape.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Loader2, Sparkles, Save } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -15,14 +18,20 @@ export const Route = createFileRoute("/admin")({
 });
 
 type Msg = { id: string; name: string; email: string; subject: string | null; message: string; is_read: boolean; created_at: string };
+type Scraped = { url: string; title: string; category: string; tag: string; description: string; highlights: string[]; image_url: string; live_url: string };
 
 function Admin() {
   const nav = useNavigate();
+  const scrape = useServerFn(scrapeProject);
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact">("messages");
+  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import">("messages");
+  const [importUrl, setImportUrl] = useState("");
+  const [scraping, setScraping] = useState(false);
+  const [preview, setPreview] = useState<Scraped | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -65,6 +74,42 @@ function Admin() {
     nav({ to: "/auth" });
   }
 
+  async function runScrape() {
+    const url = importUrl.trim();
+    if (!url) return;
+    setPreview(null);
+    setScraping(true);
+    try {
+      const result = await scrape({ data: { url } });
+      setPreview(result as Scraped);
+      toast.success("Extracted. Review, edit, then save.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Extraction failed");
+    } finally {
+      setScraping(false);
+    }
+  }
+
+  async function saveImported() {
+    if (!preview) return;
+    setSaving(true);
+    const { error } = await supabase.from("projects").insert({
+      title: preview.title,
+      category: preview.category,
+      tag: preview.tag || null,
+      description: preview.description,
+      image_url: preview.image_url || null,
+      live_url: preview.live_url || null,
+      visible: true,
+      sort_order: 999,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Added to Selected Work.");
+    setPreview(null);
+    setImportUrl("");
+  }
+
   if (!ready) return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   if (!isAdmin) return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -97,6 +142,7 @@ function Admin() {
             ["hero", "Hero"],
             ["about", "About"],
             ["contact", "Contact"],
+            ["import", "Import Project"],
           ].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm ${tab === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
@@ -205,8 +251,72 @@ function Admin() {
             </Card>
           )}
 
+          {tab === "import" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Import Project from URL</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Paste any live site URL. We'll fetch the page, extract title, description, category and cover image with AI, and let you review before saving to Selected Work.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.lovable.app"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") runScrape(); }}
+                  />
+                  <Button onClick={runScrape} disabled={scraping || !importUrl.trim()}>
+                    {scraping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Extract
+                  </Button>
+                </div>
+
+                {preview && (
+                  <div className="space-y-3 rounded-lg border border-border/60 bg-card/40 p-4">
+                    {preview.image_url && (
+                      <img src={preview.image_url} alt="" className="mb-2 h-40 w-full rounded object-cover" />
+                    )}
+                    <label className="block text-sm">Title
+                      <Input value={preview.title} onChange={(e) => setPreview({ ...preview, title: e.target.value })} />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">Category
+                        <Input value={preview.category} onChange={(e) => setPreview({ ...preview, category: e.target.value })} />
+                      </label>
+                      <label className="block text-sm">Tag
+                        <Input value={preview.tag} onChange={(e) => setPreview({ ...preview, tag: e.target.value })} />
+                      </label>
+                    </div>
+                    <label className="block text-sm">Description
+                      <Textarea rows={3} value={preview.description} onChange={(e) => setPreview({ ...preview, description: e.target.value })} />
+                    </label>
+                    <label className="block text-sm">Live URL
+                      <Input value={preview.live_url} onChange={(e) => setPreview({ ...preview, live_url: e.target.value })} />
+                    </label>
+                    <label className="block text-sm">Cover image URL
+                      <Input value={preview.image_url} onChange={(e) => setPreview({ ...preview, image_url: e.target.value })} />
+                    </label>
+                    {preview.highlights.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        <div className="mb-1 font-medium">Highlights detected:</div>
+                        <ul className="list-inside list-disc">{preview.highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button onClick={saveImported} disabled={saving}>
+                        {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save to Selected Work
+                      </Button>
+                      <Button variant="outline" onClick={() => setPreview(null)}>Discard</Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="mt-6 rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-            <strong>Note:</strong> Full CRUD editors for Services, Skills, Metrics, Credentials, Packages, Projects, Brands, Testimonials, Process, and FAQs are available in the database. Ask to build the visual editors when you need them.
+            <strong>Tip:</strong> Use <em>Import Project</em> to paste any live site URL and auto-extract portfolio entries. Full CRUD editors for other content tables live in the database.
           </div>
         </main>
       </div>
