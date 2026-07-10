@@ -1,12 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { scrapeProject } from "@/lib/scrape.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Loader2, Sparkles, Save } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -15,14 +18,20 @@ export const Route = createFileRoute("/admin")({
 });
 
 type Msg = { id: string; name: string; email: string; subject: string | null; message: string; is_read: boolean; created_at: string };
+type Scraped = { url: string; title: string; category: string; tag: string; description: string; highlights: string[]; image_url: string; live_url: string };
 
 function Admin() {
   const nav = useNavigate();
+  const scrape = useServerFn(scrapeProject);
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact">("messages");
+  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import">("messages");
+  const [importUrl, setImportUrl] = useState("");
+  const [scraping, setScraping] = useState(false);
+  const [preview, setPreview] = useState<Scraped | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
