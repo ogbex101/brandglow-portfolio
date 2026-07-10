@@ -74,6 +74,42 @@ function Admin() {
     nav({ to: "/auth" });
   }
 
+  async function runScrape() {
+    const url = importUrl.trim();
+    if (!url) return;
+    setPreview(null);
+    setScraping(true);
+    try {
+      const result = await scrape({ data: { url } });
+      setPreview(result as Scraped);
+      toast.success("Extracted. Review, edit, then save.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Extraction failed");
+    } finally {
+      setScraping(false);
+    }
+  }
+
+  async function saveImported() {
+    if (!preview) return;
+    setSaving(true);
+    const { error } = await supabase.from("projects").insert({
+      title: preview.title,
+      category: preview.category,
+      tag: preview.tag || null,
+      description: preview.description,
+      image_url: preview.image_url || null,
+      live_url: preview.live_url || null,
+      visible: true,
+      sort_order: 999,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Added to Selected Work.");
+    setPreview(null);
+    setImportUrl("");
+  }
+
   if (!ready) return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   if (!isAdmin) return (
     <div className="flex min-h-screen items-center justify-center px-4">
