@@ -1,11 +1,11 @@
-import type { ReactNode, CSSProperties } from "react";
+import type { ReactNode, CSSProperties, ElementType } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 
 interface Props {
   children: ReactNode;
   delay?: number;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
   style?: CSSProperties;
 }
 
