@@ -246,10 +246,12 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          live_url: string | null
           sort_order: number
           tag: string | null
           title: string
           updated_at: string
+          video_url: string | null
           visible: boolean
         }
         Insert: {
@@ -258,10 +260,12 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          live_url?: string | null
           sort_order?: number
           tag?: string | null
           title: string
           updated_at?: string
+          video_url?: string | null
           visible?: boolean
         }
         Update: {
@@ -270,10 +274,12 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          live_url?: string | null
           sort_order?: number
           tag?: string | null
           title?: string
           updated_at?: string
+          video_url?: string | null
           visible?: boolean
         }
         Relationships: []
