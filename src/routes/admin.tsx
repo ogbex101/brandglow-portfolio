@@ -251,8 +251,72 @@ function Admin() {
             </Card>
           )}
 
+          {tab === "import" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Import Project from URL</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Paste any live site URL. We'll fetch the page, extract title, description, category and cover image with AI, and let you review before saving to Selected Work.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.lovable.app"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") runScrape(); }}
+                  />
+                  <Button onClick={runScrape} disabled={scraping || !importUrl.trim()}>
+                    {scraping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Extract
+                  </Button>
+                </div>
+
+                {preview && (
+                  <div className="space-y-3 rounded-lg border border-border/60 bg-card/40 p-4">
+                    {preview.image_url && (
+                      <img src={preview.image_url} alt="" className="mb-2 h-40 w-full rounded object-cover" />
+                    )}
+                    <label className="block text-sm">Title
+                      <Input value={preview.title} onChange={(e) => setPreview({ ...preview, title: e.target.value })} />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">Category
+                        <Input value={preview.category} onChange={(e) => setPreview({ ...preview, category: e.target.value })} />
+                      </label>
+                      <label className="block text-sm">Tag
+                        <Input value={preview.tag} onChange={(e) => setPreview({ ...preview, tag: e.target.value })} />
+                      </label>
+                    </div>
+                    <label className="block text-sm">Description
+                      <Textarea rows={3} value={preview.description} onChange={(e) => setPreview({ ...preview, description: e.target.value })} />
+                    </label>
+                    <label className="block text-sm">Live URL
+                      <Input value={preview.live_url} onChange={(e) => setPreview({ ...preview, live_url: e.target.value })} />
+                    </label>
+                    <label className="block text-sm">Cover image URL
+                      <Input value={preview.image_url} onChange={(e) => setPreview({ ...preview, image_url: e.target.value })} />
+                    </label>
+                    {preview.highlights.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        <div className="mb-1 font-medium">Highlights detected:</div>
+                        <ul className="list-inside list-disc">{preview.highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button onClick={saveImported} disabled={saving}>
+                        {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save to Selected Work
+                      </Button>
+                      <Button variant="outline" onClick={() => setPreview(null)}>Discard</Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="mt-6 rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-            <strong>Note:</strong> Full CRUD editors for Services, Skills, Metrics, Credentials, Packages, Projects, Brands, Testimonials, Process, and FAQs are available in the database. Ask to build the visual editors when you need them.
+            <strong>Tip:</strong> Use <em>Import Project</em> to paste any live site URL and auto-extract portfolio entries. Full CRUD editors for other content tables live in the database.
           </div>
         </main>
       </div>
