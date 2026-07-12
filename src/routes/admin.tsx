@@ -183,6 +183,7 @@ function Admin() {
             ["about", "About"],
             ["contact", "Contact"],
             ["import", "Import Project"],
+            ["bulk", "Bulk Import"],
           ].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm ${tab === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
