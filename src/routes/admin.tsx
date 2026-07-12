@@ -116,6 +116,40 @@ function Admin() {
     setImportUrl("");
   }
 
+  async function runBulk() {
+    const urls = Array.from(new Set(
+      bulkText.split(/\s+/).map((s) => s.trim()).filter((s) => /^https?:\/\//i.test(s))
+    ));
+    if (urls.length === 0) { toast.error("Paste at least one valid URL."); return; }
+    setBulkRunning(true);
+    setBulkLog(urls.map((url) => ({ url, status: "pending" as const })));
+    let ok = 0, fail = 0;
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      try {
+        const r = await scrape({ data: { url } }) as Scraped;
+        const { error } = await supabase.from("projects").insert({
+          title: r.title,
+          category: bulkCategory.trim() || r.category || "Web",
+          tag: (bulkTag.trim() || r.tag) || null,
+          description: r.description,
+          image_url: r.image_url || null,
+          live_url: r.live_url || url,
+          visible: true,
+          sort_order: 1000 + i,
+        });
+        if (error) throw new Error(error.message);
+        ok++;
+        setBulkLog((prev) => prev.map((row, idx) => idx === i ? { ...row, status: "ok", title: r.title } : row));
+      } catch (e: any) {
+        fail++;
+        setBulkLog((prev) => prev.map((row, idx) => idx === i ? { ...row, status: "error", msg: e?.message ?? "failed" } : row));
+      }
+    }
+    setBulkRunning(false);
+    toast.success(`Done — ${ok} added, ${fail} failed.`);
+  }
+
   if (!ready) return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   if (!isAdmin) return (
     <div className="flex min-h-screen items-center justify-center px-4">
