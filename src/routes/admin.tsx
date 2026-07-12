@@ -356,6 +356,54 @@ function Admin() {
             </Card>
           )}
 
+          {tab === "bulk" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Bulk Import Projects</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Paste many URLs at once (one per line or separated by spaces). Each will be scraped with AI and saved to Selected Work. Set an optional category/tag to group them (e.g. "AI Video Editing", "Virtual Assistant", "Bubble").
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">Category override (optional)
+                    <Input placeholder="e.g. Marketing Site" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} />
+                  </label>
+                  <label className="block text-sm">Tag override (optional)
+                    <Input placeholder="e.g. Bubble" value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} />
+                  </label>
+                </div>
+                <label className="block text-sm">URLs
+                  <Textarea rows={10} placeholder={"https://site-1.lovable.app\nhttps://site-2.lovable.app"} value={bulkText} onChange={(e) => setBulkText(e.target.value)} />
+                </label>
+                <div className="flex items-center gap-3">
+                  <Button onClick={runBulk} disabled={bulkRunning || !bulkText.trim()}>
+                    {bulkRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {bulkRunning ? "Importing…" : "Start bulk import"}
+                  </Button>
+                  {bulkLog.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {bulkLog.filter((r) => r.status === "ok").length} ok · {bulkLog.filter((r) => r.status === "error").length} failed · {bulkLog.filter((r) => r.status === "pending").length} pending
+                    </span>
+                  )}
+                </div>
+
+                {bulkLog.length > 0 && (
+                  <div className="max-h-80 space-y-1 overflow-auto rounded-md border border-border/60 p-2 text-xs">
+                    {bulkLog.map((r, i) => (
+                      <div key={i} className={`flex items-start gap-2 rounded px-2 py-1 ${r.status === "ok" ? "text-emerald-500" : r.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                        <span className="w-5 shrink-0">{r.status === "ok" ? "✓" : r.status === "error" ? "✕" : "…"}</span>
+                        <span className="flex-1 truncate">
+                          {r.url}
+                          {r.title && <span className="ml-2 text-foreground">— {r.title}</span>}
+                          {r.msg && <span className="ml-2 opacity-70">— {r.msg}</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="mt-6 rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
             <strong>Tip:</strong> Use <em>Import Project</em> to paste any live site URL and auto-extract portfolio entries. Full CRUD editors for other content tables live in the database.
           </div>
