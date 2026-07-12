@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Reveal } from "@/components/animated/reveal";
 import { AnimatedCounter } from "@/components/animated/counter";
 import { AnimatedProgress } from "@/components/animated/progress-bar";
+import { WordReveal } from "@/components/animated/word-reveal";
 import * as Icons from "lucide-react";
 import { ArrowRight, Mail, Phone, MessageCircle, Check, Play } from "lucide-react";
 
