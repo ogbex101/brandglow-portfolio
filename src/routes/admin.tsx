@@ -27,11 +27,17 @@ function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import">("messages");
+  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import" | "bulk">("messages");
   const [importUrl, setImportUrl] = useState("");
   const [scraping, setScraping] = useState(false);
   const [preview, setPreview] = useState<Scraped | null>(null);
   const [saving, setSaving] = useState(false);
+  // Bulk import
+  const [bulkText, setBulkText] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkTag, setBulkTag] = useState("");
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkLog, setBulkLog] = useState<{ url: string; status: "pending" | "ok" | "error"; msg?: string; title?: string }[]>([]);
 
   useEffect(() => {
     (async () => {
