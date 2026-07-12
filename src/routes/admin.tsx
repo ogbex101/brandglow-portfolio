@@ -27,11 +27,17 @@ function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import">("messages");
+  const [tab, setTab] = useState<"messages" | "hero" | "about" | "contact" | "import" | "bulk">("messages");
   const [importUrl, setImportUrl] = useState("");
   const [scraping, setScraping] = useState(false);
   const [preview, setPreview] = useState<Scraped | null>(null);
   const [saving, setSaving] = useState(false);
+  // Bulk import
+  const [bulkText, setBulkText] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkTag, setBulkTag] = useState("");
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkLog, setBulkLog] = useState<{ url: string; status: "pending" | "ok" | "error"; msg?: string; title?: string }[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -110,6 +116,40 @@ function Admin() {
     setImportUrl("");
   }
 
+  async function runBulk() {
+    const urls = Array.from(new Set(
+      bulkText.split(/\s+/).map((s) => s.trim()).filter((s) => /^https?:\/\//i.test(s))
+    ));
+    if (urls.length === 0) { toast.error("Paste at least one valid URL."); return; }
+    setBulkRunning(true);
+    setBulkLog(urls.map((url) => ({ url, status: "pending" as const })));
+    let ok = 0, fail = 0;
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      try {
+        const r = await scrape({ data: { url } }) as Scraped;
+        const { error } = await supabase.from("projects").insert({
+          title: r.title,
+          category: bulkCategory.trim() || r.category || "Web",
+          tag: (bulkTag.trim() || r.tag) || null,
+          description: r.description,
+          image_url: r.image_url || null,
+          live_url: r.live_url || url,
+          visible: true,
+          sort_order: 1000 + i,
+        });
+        if (error) throw new Error(error.message);
+        ok++;
+        setBulkLog((prev) => prev.map((row, idx) => idx === i ? { ...row, status: "ok", title: r.title } : row));
+      } catch (e: any) {
+        fail++;
+        setBulkLog((prev) => prev.map((row, idx) => idx === i ? { ...row, status: "error", msg: e?.message ?? "failed" } : row));
+      }
+    }
+    setBulkRunning(false);
+    toast.success(`Done — ${ok} added, ${fail} failed.`);
+  }
+
   if (!ready) return <div className="flex min-h-screen items-center justify-center">Loading…</div>;
   if (!isAdmin) return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -143,6 +183,7 @@ function Admin() {
             ["about", "About"],
             ["contact", "Contact"],
             ["import", "Import Project"],
+            ["bulk", "Bulk Import"],
           ].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`w-full rounded-md px-3 py-2 text-left text-sm ${tab === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
@@ -309,6 +350,54 @@ function Admin() {
                       </Button>
                       <Button variant="outline" onClick={() => setPreview(null)}>Discard</Button>
                     </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {tab === "bulk" && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Bulk Import Projects</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Paste many URLs at once (one per line or separated by spaces). Each will be scraped with AI and saved to Selected Work. Set an optional category/tag to group them (e.g. "AI Video Editing", "Virtual Assistant", "Bubble").
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">Category override (optional)
+                    <Input placeholder="e.g. Marketing Site" value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)} />
+                  </label>
+                  <label className="block text-sm">Tag override (optional)
+                    <Input placeholder="e.g. Bubble" value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} />
+                  </label>
+                </div>
+                <label className="block text-sm">URLs
+                  <Textarea rows={10} placeholder={"https://site-1.lovable.app\nhttps://site-2.lovable.app"} value={bulkText} onChange={(e) => setBulkText(e.target.value)} />
+                </label>
+                <div className="flex items-center gap-3">
+                  <Button onClick={runBulk} disabled={bulkRunning || !bulkText.trim()}>
+                    {bulkRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {bulkRunning ? "Importing…" : "Start bulk import"}
+                  </Button>
+                  {bulkLog.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {bulkLog.filter((r) => r.status === "ok").length} ok · {bulkLog.filter((r) => r.status === "error").length} failed · {bulkLog.filter((r) => r.status === "pending").length} pending
+                    </span>
+                  )}
+                </div>
+
+                {bulkLog.length > 0 && (
+                  <div className="max-h-80 space-y-1 overflow-auto rounded-md border border-border/60 p-2 text-xs">
+                    {bulkLog.map((r, i) => (
+                      <div key={i} className={`flex items-start gap-2 rounded px-2 py-1 ${r.status === "ok" ? "text-emerald-500" : r.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                        <span className="w-5 shrink-0">{r.status === "ok" ? "✓" : r.status === "error" ? "✕" : "…"}</span>
+                        <span className="flex-1 truncate">
+                          {r.url}
+                          {r.title && <span className="ml-2 text-foreground">— {r.title}</span>}
+                          {r.msg && <span className="ml-2 opacity-70">— {r.msg}</span>}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

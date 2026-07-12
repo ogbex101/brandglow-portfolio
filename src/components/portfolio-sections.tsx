@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Reveal } from "@/components/animated/reveal";
 import { AnimatedCounter } from "@/components/animated/counter";
 import { AnimatedProgress } from "@/components/animated/progress-bar";
+import { WordReveal } from "@/components/animated/word-reveal";
 import * as Icons from "lucide-react";
 import { ArrowRight, Mail, Phone, MessageCircle, Check, Play } from "lucide-react";
 
@@ -104,30 +105,56 @@ export function PortfolioSections({ data }: { data: Data }) {
 
       {/* ABOUT */}
       <section id="about" className="section-pad mx-auto max-w-6xl px-4 md:px-8">
-        <div className="grid gap-12 md:grid-cols-[1fr_2fr] md:items-start">
+        <div className="grid gap-14 md:grid-cols-[5fr_7fr] md:items-center">
           {about.avatar_url && (
             <Reveal className="mx-auto md:mx-0">
-              <div className="media-hover mx-auto h-64 w-64 overflow-hidden rounded-2xl shadow-[var(--shadow-elegant)] md:mx-0">
-                <img src={about.avatar_url} alt="Daniel Ogbeifun" className="h-full w-full object-cover" />
+              <div className="group relative mx-auto w-full max-w-sm">
+                {/* animated gradient orb */}
+                <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-primary/40 via-accent/30 to-transparent opacity-70 blur-3xl transition-opacity duration-700 group-hover:opacity-100" />
+                {/* decorative frame offset */}
+                <div className="pointer-events-none absolute -bottom-4 -right-4 -z-10 h-full w-full rounded-2xl border border-primary/40 transition-transform duration-500 group-hover:translate-x-1 group-hover:translate-y-1" />
+                {/* photo */}
+                <div className="relative overflow-hidden rounded-2xl shadow-[var(--shadow-elegant)] ring-1 ring-border/60">
+                  <img
+                    src={about.avatar_url}
+                    alt="Daniel Ogbeifun"
+                    className="aspect-[4/5] h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+                </div>
+                {/* floating badge */}
+                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-border/60 bg-background/90 px-4 py-2 text-xs font-medium backdrop-blur shadow-lg">
+                  <span className="text-primary">●</span> Available for new projects
+                </div>
               </div>
             </Reveal>
           )}
-          <Reveal delay={120}>
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">About</p>
-            <h2 className="mb-6 text-4xl font-bold md:text-5xl">{about.headline}</h2>
-            <div className="space-y-4 text-lg leading-relaxed text-muted-foreground">
-              {((about.bio ?? "").split(". ").reduce((acc: string[][], s: string, i: number) => {
-                const chunk = Math.floor(i / 3); (acc[chunk] ??= []).push(s); return acc;
-              }, [] as string[][]) as string[][]).map((chunk: string[], i: number) => (
-                <p key={i}>{chunk.join(". ")}</p>
-              ))}
-            </div>
+          <div>
+            <Reveal>
+              <p className="mb-3 text-sm uppercase tracking-[0.25em] text-primary">About</p>
+            </Reveal>
+            <WordReveal
+              text={about.headline ?? ""}
+              className="mb-6 text-4xl font-bold leading-tight md:text-5xl"
+              delayBase={120}
+            />
+            <Reveal delay={320}>
+              <div className="space-y-4 text-lg leading-relaxed text-muted-foreground">
+                {((about.bio ?? "").split(". ").reduce((acc: string[][], s: string, i: number) => {
+                  const chunk = Math.floor(i / 3); (acc[chunk] ??= []).push(s); return acc;
+                }, [] as string[][]) as string[][]).map((chunk: string[], i: number) => (
+                  <p key={i}>{chunk.join(". ")}</p>
+                ))}
+              </div>
+            </Reveal>
             {about.pull_quote && (
-              <blockquote className="mt-8 border-l-4 border-primary pl-6 text-2xl font-display italic text-foreground">
-                "{about.pull_quote}"
-              </blockquote>
+              <Reveal delay={480}>
+                <blockquote className="mt-8 border-l-4 border-primary pl-6 text-2xl font-display italic text-foreground">
+                  "{about.pull_quote}"
+                </blockquote>
+              </Reveal>
             )}
-          </Reveal>
+          </div>
         </div>
       </section>
 
