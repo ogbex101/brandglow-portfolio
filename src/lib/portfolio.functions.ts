@@ -4,31 +4,52 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export const getPortfolio = createServerFn({ method: "GET" }).handler(async () => {
   const sb = publicClient();
-  const [settings, services, skills, metrics, credentials, packages, projects, brands, testimonials, process_steps, faqs] =
-    await Promise.all([
-      sb.from("site_settings").select("*"),
-      sb.from("services").select("*").eq("visible", true).order("sort_order"),
-      sb.from("skills").select("*").eq("visible", true).order("sort_order"),
-      sb.from("metrics").select("*").eq("visible", true).order("sort_order"),
-      sb.from("credentials").select("*").eq("visible", true).order("sort_order"),
-      sb.from("packages").select("*").eq("visible", true).order("sort_order"),
-      sb.from("projects").select("*").eq("visible", true).order("sort_order"),
-      sb.from("brands").select("*").eq("visible", true).order("sort_order"),
-      sb.from("testimonials").select("*").eq("visible", true).order("sort_order"),
-      sb.from("process_steps").select("*").eq("visible", true).order("sort_order"),
-      sb.from("faqs").select("*").eq("visible", true).order("sort_order"),
-    ]);
+  const [
+    settings,
+    services,
+    skills,
+    metrics,
+    credentials,
+    packages,
+    projects,
+    brands,
+    testimonials,
+    process_steps,
+    faqs,
+    niches,
+  ] = await Promise.all([
+    sb.from("site_settings").select("*"),
+    sb.from("services").select("*").eq("visible", true).order("sort_order"),
+    sb.from("skills").select("*").eq("visible", true).order("sort_order"),
+    sb.from("metrics").select("*").eq("visible", true).order("sort_order"),
+    sb.from("credentials").select("*").eq("visible", true).order("sort_order"),
+    sb.from("packages").select("*").eq("visible", true).order("sort_order"),
+    sb.from("projects").select("*").eq("visible", true).order("sort_order"),
+    sb.from("brands").select("*").eq("visible", true).order("sort_order"),
+    sb.from("testimonials").select("*").eq("visible", true).order("sort_order"),
+    sb.from("process_steps").select("*").eq("visible", true).order("sort_order"),
+    sb.from("faqs").select("*").eq("visible", true).order("sort_order"),
+    sb.from("niches").select("*").order("sort_order"),
+  ]);
   const settingsMap: Record<string, any> = {};
-  (settings.data ?? []).forEach((r: any) => { settingsMap[r.key] = r.value; });
+  (settings.data ?? []).forEach((r: any) => {
+    settingsMap[r.key] = r.value;
+  });
+  const nicheById: Record<string, string> = {};
+  (niches.data ?? []).forEach((n: any) => {
+    nicheById[n.id] = n.name;
+  });
+  const projectsWithNiche = (projects.data ?? []).map((p: any) => ({
+    ...p,
+    niche_name: p.niche_id ? (nicheById[p.niche_id] ?? null) : null,
+  }));
   return {
     settings: settingsMap,
     services: services.data ?? [],
@@ -36,11 +57,12 @@ export const getPortfolio = createServerFn({ method: "GET" }).handler(async () =
     metrics: metrics.data ?? [],
     credentials: credentials.data ?? [],
     packages: packages.data ?? [],
-    projects: projects.data ?? [],
+    projects: projectsWithNiche,
     brands: brands.data ?? [],
     testimonials: testimonials.data ?? [],
     process_steps: process_steps.data ?? [],
     faqs: faqs.data ?? [],
+    niches: niches.data ?? [],
   };
 });
 
@@ -56,7 +78,10 @@ export const submitContact = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = publicClient();
     const { error } = await sb.from("contact_messages").insert({
-      name: data.name, email: data.email, subject: data.subject ?? null, message: data.message,
+      name: data.name,
+      email: data.email,
+      subject: data.subject ?? null,
+      message: data.message,
     });
     if (error) throw new Error(error.message);
     return { ok: true };

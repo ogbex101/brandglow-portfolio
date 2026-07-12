@@ -102,8 +102,8 @@
 }
 
 @utility section-pad {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
 }
 
 @utility media-hover {
@@ -123,4 +123,27 @@
     transform: translateY(-4px);
     box-shadow: var(--shadow-elegant), var(--shadow-glow);
   }
+}
+
+@utility depth-field {
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+@utility blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.5;
+  animation: blob-float 16s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, -6%) scale(1.08); }
+  66% { transform: translate(-5%, 4%) scale(0.95); }
 }
