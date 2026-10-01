@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 
-interface Parsed { prefix: string; number: number; suffix: string; decimals: number; }
+interface Parsed {
+  prefix: string;
+  number: number;
+  suffix: string;
+  decimals: number;
+}
 
 function parse(value: string): Parsed | null {
   const m = String(value).match(/^([^\d-]*)(-?\d+(?:\.\d+)?)(.*)$/);
@@ -22,15 +27,22 @@ interface Props {
 }
 
 /** Counts up from 0 to the numeric part of `value`, with eased deceleration
- *  and a subtle "snap" scale bounce at the end. Fires once on scroll-in. */
+ *  and a subtle "snap" scale bounce at the end. Fires once on scroll-in.
+ *
+ *  Until the count starts it shows the real value, so the server-rendered
+ *  page, link previews, screen readers and anyone with reduced motion read
+ *  "92%" rather than "0%". */
 export function AnimatedCounter({ value, duration = 1600, delay = 0, className }: Props) {
   const { ref, visible } = useReveal<HTMLSpanElement>();
   const parsed = parse(value);
   const [n, setN] = useState(0);
+  const [started, setStarted] = useState(false);
   const [snap, setSnap] = useState(false);
 
   useEffect(() => {
     if (!visible || !parsed) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    setStarted(true);
     let raf = 0;
     let start = 0;
     const timer = window.setTimeout(() => {
@@ -46,11 +58,19 @@ export function AnimatedCounter({ value, duration = 1600, delay = 0, className }
       };
       raf = requestAnimationFrame(step);
     }, delay);
-    return () => { window.clearTimeout(timer); cancelAnimationFrame(raf); };
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
   }, [visible, parsed?.number, duration, delay]);
 
-  if (!parsed) return <span ref={ref} className={className}>{value}</span>;
-  const display = n.toFixed(parsed.decimals);
+  if (!parsed)
+    return (
+      <span ref={ref} className={className}>
+        {value}
+      </span>
+    );
+  const display = (started ? n : parsed.number).toFixed(parsed.decimals);
   return (
     <span
       ref={ref}
@@ -61,7 +81,9 @@ export function AnimatedCounter({ value, duration = 1600, delay = 0, className }
         transition: "transform 260ms cubic-bezier(.34,1.56,.64,1)",
       }}
     >
-      {parsed.prefix}{display}{parsed.suffix}
+      {parsed.prefix}
+      {display}
+      {parsed.suffix}
     </span>
   );
 }
