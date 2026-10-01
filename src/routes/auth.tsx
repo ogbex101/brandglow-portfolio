@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Sign In — Daniel Ogbeifun" }] }),
+  head: () => ({ meta: [{ title: "Sign in | Daniel Ogbeifun Osewe" }] }),
   component: AuthPage,
 });
 
@@ -31,7 +31,8 @@ function AuthPage() {
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email, password,
+          email,
+          password,
           options: { emailRedirectTo: `${window.location.origin}/admin` },
         });
         if (error) throw error;
@@ -44,7 +45,9 @@ function AuthPage() {
       }
     } catch (err: any) {
       toast.error(err?.message ?? "Authentication failed");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -58,8 +61,21 @@ function AuthPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            <Input type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Input type="password" placeholder="Password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              type="email"
+              placeholder="Email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "…" : mode === "signin" ? "Sign in" : "Sign up"}
             </Button>
@@ -71,7 +87,9 @@ function AuthPage() {
             {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
           </button>
           <div className="mt-4 text-center">
-            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">← Back to site</Link>
+            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
+              ← Back to site
+            </Link>
           </div>
         </CardContent>
       </Card>
