@@ -11,7 +11,7 @@ import { CollectionEditor, type FieldConfig } from "@/components/admin/collectio
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Admin — Daniel Ogbeifun" }] }),
+  head: () => ({ meta: [{ title: "Admin | Daniel Ogbeifun Osewe" }] }),
   component: Admin,
 });
 

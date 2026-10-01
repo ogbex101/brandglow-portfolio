@@ -10,13 +10,13 @@ export const Route = createFileRoute("/")({
   loader: ({ context }) => context.queryClient.ensureQueryData(portfolioQuery()),
   head: () => ({
     meta: [
-      { title: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
+      { title: "Daniel Ogbeifun Osewe | Digital Marketer & Brand Strategist" },
       {
         name: "description",
         content:
           "Strategy, design, and marketing that closes the gap between how valuable brands are and how valuable they look.",
       },
-      { property: "og:title", content: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
+      { property: "og:title", content: "Daniel Ogbeifun Osewe | Digital Marketer & Brand Strategist" },
       {
         property: "og:description",
         content:
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       { property: "og:image:height", content: "630" },
       { property: "og:url", content: "https://brandglow-portfolio.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Daniel Ogbeifun — Digital Marketer & Brand Strategist" },
+      { name: "twitter:title", content: "Daniel Ogbeifun Osewe | Digital Marketer & Brand Strategist" },
       { name: "twitter:image", content: "https://brandglow-portfolio.lovable.app/og-image.jpg" },
     ],
   }),

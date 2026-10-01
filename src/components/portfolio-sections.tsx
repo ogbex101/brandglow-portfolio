@@ -366,7 +366,7 @@ export function PortfolioSections({ data }: { data: Data }) {
             href="#top"
             className="font-display text-lg font-bold tracking-tight transition-colors hover:text-primary"
           >
-            {site.name ?? "Daniel Ogbeifun"}
+            {site.name ?? "Daniel Ogbeifun Osewe"}
           </a>
           <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
             {[
@@ -459,7 +459,7 @@ export function PortfolioSections({ data }: { data: Data }) {
                 <div className="relative overflow-hidden rounded-2xl shadow-[var(--shadow-elegant)] ring-1 ring-border/60">
                   <img
                     src={about.avatar_url}
-                    alt="Daniel Ogbeifun"
+                    alt="Daniel Ogbeifun Osewe"
                     className="aspect-[4/5] h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
                   />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
@@ -796,7 +796,7 @@ export function PortfolioSections({ data }: { data: Data }) {
 
       {/* FOOTER */}
       <footer className="border-t border-border/40 py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} {site.name ?? "Daniel Ogbeifun"}. All rights reserved.
+        © {new Date().getFullYear()} {site.name ?? "Daniel Ogbeifun Osewe"}. All rights reserved.
       </footer>
     </div>
   );
