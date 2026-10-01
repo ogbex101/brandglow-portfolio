@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HeroVideoSequence } from "@/components/hero-video-sequence";
 import { ContactForm } from "@/components/contact-form";
@@ -18,6 +17,15 @@ import { Reveal } from "@/components/animated/reveal";
 import { AnimatedCounter } from "@/components/animated/counter";
 import { AnimatedProgress } from "@/components/animated/progress-bar";
 import { WordReveal } from "@/components/animated/word-reveal";
+import {
+  bioParagraphs,
+  cleanProjects,
+  isEarned,
+  isPlaceholderImage,
+  phoneDisplay,
+  telHref,
+  whatsappHref,
+} from "@/lib/display";
 import { useTilt } from "@/hooks/use-tilt";
 import { supabase } from "@/integrations/supabase/client";
 import * as Icons from "lucide-react";
@@ -56,7 +64,7 @@ function VideoThumb({
   const ref = useRef<HTMLVideoElement>(null);
   if (!src) {
     return (
-      <div className="flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 text-2xl font-display font-bold">
+      <div className="flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 px-6 text-center text-2xl font-display font-bold">
         {label}
       </div>
     );
@@ -162,15 +170,23 @@ function MetricCard({ m, index }: { m: any; index: number }) {
         {hasSplit ? (
           <div className="flex items-center justify-center gap-6">
             <div>
-              <div className="text-3xl font-bold text-gradient md:text-4xl">
-                <AnimatedCounter value={m.open_rate || "0%"} delay={index * 90} />
+              <div className="text-3xl font-bold md:text-4xl">
+                <AnimatedCounter
+                  className="text-gradient"
+                  value={m.open_rate || "0%"}
+                  delay={index * 90}
+                />
               </div>
               <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Open</div>
             </div>
             <div className="h-10 w-px bg-border/60" />
             <div>
-              <div className="text-3xl font-bold text-gradient md:text-4xl">
-                <AnimatedCounter value={m.response_rate || "0%"} delay={index * 90 + 80} />
+              <div className="text-3xl font-bold md:text-4xl">
+                <AnimatedCounter
+                  className="text-gradient"
+                  value={m.response_rate || "0%"}
+                  delay={index * 90 + 80}
+                />
               </div>
               <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                 Response
@@ -178,8 +194,11 @@ function MetricCard({ m, index }: { m: any; index: number }) {
             </div>
           </div>
         ) : (
-          <div className="text-5xl font-bold text-gradient md:text-6xl">
-            <AnimatedCounter value={m.metric_value} delay={index * 90} />
+          <div className="text-5xl font-bold md:text-6xl">
+            {/* The gradient sits on the counter itself: on the parent, the
+                counter's own transform layer escapes background-clip:text and
+                the number renders invisible. */}
+            <AnimatedCounter className="text-gradient" value={m.metric_value} delay={index * 90} />
           </div>
         )}
         <div className="mt-3 text-sm text-muted-foreground">{m.metric_label}</div>
@@ -225,10 +244,7 @@ function BrandCard({ b }: { b: any }) {
           </div>
         )}
         <h3 className="mb-2 font-semibold">{b.name}</h3>
-        <p className="mb-4 text-xs text-muted-foreground">{b.description}</p>
-        <Button variant="outline" size="sm" disabled={!b.case_study_enabled} className="w-full">
-          {b.case_study_enabled ? "View case study" : "Case study coming soon"}
-        </Button>
+        <p className="text-xs text-muted-foreground">{b.description}</p>
       </CardContent>
     </Card>
   );
@@ -249,6 +265,7 @@ function TestimonialCard({ t }: { t: any }) {
 }
 
 function SampleCard({ p, onOpen }: { p: any; onOpen: (p: any) => void }) {
+  const image = isPlaceholderImage(p.image_url) ? null : p.image_url;
   return (
     <TiltWrapper>
       <Card
@@ -256,13 +273,13 @@ function SampleCard({ p, onOpen }: { p: any; onOpen: (p: any) => void }) {
         onClick={() => onOpen(p)}
       >
         {p.video_url ? (
-          <VideoThumb src={p.video_url} poster={p.image_url} label={p.title} />
-        ) : p.image_url ? (
+          <VideoThumb src={p.video_url} poster={image ?? undefined} label={p.title} />
+        ) : image ? (
           <div className="media-hover h-48">
-            <img src={p.image_url} alt={p.title} className="h-full w-full object-cover" />
+            <img src={image} alt={p.title} className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 text-2xl font-display font-bold transition-transform duration-700 group-hover:scale-105">
+          <div className="flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20 px-6 text-center text-2xl font-display font-bold transition-transform duration-700 group-hover:scale-105">
             {p.title}
           </div>
         )}
@@ -297,8 +314,15 @@ export function PortfolioSections({ data }: { data: Data }) {
   const contact = data.settings.contact ?? {};
   const site = data.settings.site ?? {};
 
+  // What a visitor sees: each project once, no placeholder cards, and only
+  // credentials actually earned. Everything stays editable in the admin.
+  const projects = useMemo(() => cleanProjects(data.projects), [data.projects]);
+  const credentials = data.credentials.filter((c) => isEarned(c.status));
+  const whatsappLink = whatsappHref(contact.whatsapp);
+  const phoneLink = telHref(contact.phone);
+
   const credByCategory: Record<string, any[]> = {};
-  data.credentials.forEach((c) => {
+  credentials.forEach((c) => {
     (credByCategory[c.category] ??= []).push(c);
   });
   const credGroups = Object.entries(credByCategory);
@@ -310,18 +334,18 @@ export function PortfolioSections({ data }: { data: Data }) {
 
   const nicheCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    data.projects.forEach((p) => {
+    projects.forEach((p) => {
       if (p.niche_id) counts[p.niche_id] = (counts[p.niche_id] ?? 0) + 1;
     });
     return counts;
-  }, [data.projects]);
+  }, [projects]);
   const activeNiches = useMemo(
     () => data.niches.filter((n) => nicheCounts[n.id] > 0),
     [data.niches, nicheCounts],
   );
   const filteredProjects = useMemo(
-    () => (activeNiche ? data.projects.filter((p) => p.niche_id === activeNiche) : data.projects),
-    [data.projects, activeNiche],
+    () => (activeNiche ? projects.filter((p) => p.niche_id === activeNiche) : projects),
+    [projects, activeNiche],
   );
 
   useEffect(() => {
@@ -362,12 +386,10 @@ export function PortfolioSections({ data }: { data: Data }) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <SiteSearch data={data} onOpenProject={setPreviewProject} />
-            <Link to="/auth">
-              <Button variant="outline" size="sm" className="hover-scale">
-                Sign In
-              </Button>
-            </Link>
+            <SiteSearch data={{ ...data, projects }} onOpenProject={setPreviewProject} />
+            <Button size="sm" className="hover-scale" asChild>
+              <a href="#contact">Get in touch</a>
+            </Button>
           </div>
         </div>
       </header>
@@ -460,14 +482,8 @@ export function PortfolioSections({ data }: { data: Data }) {
             />
             <Reveal delay={320}>
               <div className="space-y-4 text-lg leading-relaxed text-muted-foreground">
-                {(
-                  (about.bio ?? "").split(". ").reduce((acc: string[][], s: string, i: number) => {
-                    const chunk = Math.floor(i / 3);
-                    (acc[chunk] ??= []).push(s);
-                    return acc;
-                  }, [] as string[][]) as string[][]
-                ).map((chunk: string[], i: number) => (
-                  <p key={i}>{chunk.join(". ")}</p>
+                {bioParagraphs(about.bio ?? "").map((paragraph, i) => (
+                  <p key={i}>{paragraph}</p>
                 ))}
               </div>
             </Reveal>
@@ -483,115 +499,127 @@ export function PortfolioSections({ data }: { data: Data }) {
       </section>
 
       {/* SERVICES */}
-      <section id="services" className="section-pad bg-card/30">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <Reveal className="mb-12 text-center">
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">What I Do</p>
-            <h2 className="text-4xl font-bold md:text-5xl">Services</h2>
-          </Reveal>
-          <Reveal>
-            <ItemCarousel
-              items={data.services}
-              getKey={(s) => s.id}
-              ariaLabel="Services"
-              basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
-              renderItem={(s) => <ServiceCard s={s} />}
-            />
-          </Reveal>
-        </div>
-      </section>
+      {data.services.length > 0 && (
+        <section id="services" className="section-pad bg-card/30">
+          <div className="mx-auto max-w-7xl px-4 md:px-8">
+            <Reveal className="mb-12 text-center">
+              <p className="mb-3 text-sm uppercase tracking-widest text-primary">What I Do</p>
+              <h2 className="text-4xl font-bold md:text-5xl">Services</h2>
+            </Reveal>
+            <Reveal>
+              <ItemCarousel
+                items={data.services}
+                getKey={(s) => s.id}
+                ariaLabel="Services"
+                basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
+                renderItem={(s) => <ServiceCard s={s} />}
+              />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* SKILLS */}
-      <section id="skills" className="section-pad mx-auto max-w-6xl px-4 md:px-8">
-        <Reveal className="mb-12 text-center">
-          <p className="mb-3 text-sm uppercase tracking-widest text-primary">Toolkit</p>
-          <h2 className="text-4xl font-bold md:text-5xl">Skills</h2>
-        </Reveal>
-        <Reveal>
-          <ItemCarousel
-            items={data.skills}
-            getKey={(s) => s.id}
-            ariaLabel="Skills"
-            basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
-            renderItem={(s, i) => <SkillCard s={s} index={i} />}
-          />
-        </Reveal>
-      </section>
+      {data.skills.length > 0 && (
+        <section id="skills" className="section-pad mx-auto max-w-6xl px-4 md:px-8">
+          <Reveal className="mb-12 text-center">
+            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Toolkit</p>
+            <h2 className="text-4xl font-bold md:text-5xl">Skills</h2>
+          </Reveal>
+          <Reveal>
+            <ItemCarousel
+              items={data.skills}
+              getKey={(s) => s.id}
+              ariaLabel="Skills"
+              basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
+              renderItem={(s, i) => <SkillCard s={s} index={i} />}
+            />
+          </Reveal>
+        </section>
+      )}
 
       {/* METRICS */}
-      <section id="results" className="section-pad bg-card/30">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <Reveal className="mb-12 text-center">
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Results</p>
-            <h2 className="text-4xl font-bold md:text-5xl">Open & Response Rate</h2>
-          </Reveal>
-          <Reveal>
-            <ItemCarousel
-              items={data.metrics}
-              getKey={(m) => m.id}
-              ariaLabel="Results"
-              basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
-              renderItem={(m, i) => <MetricCard m={m} index={i} />}
-            />
-          </Reveal>
-        </div>
-      </section>
+      {data.metrics.length > 0 && (
+        <section id="results" className="section-pad bg-card/30">
+          <div className="mx-auto max-w-7xl px-4 md:px-8">
+            <Reveal className="mb-12 text-center">
+              <p className="mb-3 text-sm uppercase tracking-widest text-primary">Results</p>
+              <h2 className="text-4xl font-bold md:text-5xl">Measured Results</h2>
+            </Reveal>
+            <Reveal>
+              <ItemCarousel
+                items={data.metrics}
+                getKey={(m) => m.id}
+                ariaLabel="Results"
+                basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
+                renderItem={(m, i) => <MetricCard m={m} index={i} />}
+              />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* CREDENTIALS */}
-      <section id="credentials" className="section-pad mx-auto max-w-6xl px-4 md:px-8">
-        <Reveal className="mb-12 text-center">
-          <p className="mb-3 text-sm uppercase tracking-widest text-primary">Continuous Learning</p>
-          <h2 className="text-4xl font-bold md:text-5xl">Credentials</h2>
-        </Reveal>
-        <Reveal>
-          <ItemCarousel
-            items={credGroups}
-            getKey={([cat]) => cat}
-            ariaLabel="Credentials"
-            basisClassName="basis-full md:basis-1/2"
-            renderItem={([cat, items]) => (
-              <Card className="card-lift h-full border-border/60">
-                <CardContent className="pt-6">
-                  <div className="mb-3 flex items-baseline gap-3">
-                    <h3 className="text-lg font-semibold">{cat}</h3>
-                    <span className="text-sm text-muted-foreground">{items.length} items</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((c) => (
-                      <Badge
-                        key={c.id}
-                        variant="secondary"
-                        className="cursor-default px-3 py-1.5 text-sm transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground"
-                      >
-                        {c.name} <span className="ml-2 text-xs opacity-60">· {c.status}</span>
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          />
-        </Reveal>
-      </section>
-
-      {/* PACKAGES */}
-      <section id="packages" className="section-pad bg-card/30">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
+      {credGroups.length > 0 && (
+        <section id="credentials" className="section-pad mx-auto max-w-6xl px-4 md:px-8">
           <Reveal className="mb-12 text-center">
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Work With Me</p>
-            <h2 className="text-4xl font-bold md:text-5xl">Packages</h2>
+            <p className="mb-3 text-sm uppercase tracking-widest text-primary">
+              Continuous Learning
+            </p>
+            <h2 className="text-4xl font-bold md:text-5xl">Credentials</h2>
           </Reveal>
           <Reveal>
             <ItemCarousel
-              items={data.packages}
-              getKey={(p) => p.id}
-              ariaLabel="Packages"
-              basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
-              renderItem={(p) => <PackageCard p={p} />}
+              items={credGroups}
+              getKey={([cat]) => cat}
+              ariaLabel="Credentials"
+              basisClassName="basis-full md:basis-1/2"
+              renderItem={([cat, items]) => (
+                <Card className="card-lift h-full border-border/60">
+                  <CardContent className="pt-6">
+                    <div className="mb-3 flex items-baseline gap-3">
+                      <h3 className="text-lg font-semibold">{cat}</h3>
+                      <span className="text-sm text-muted-foreground">{items.length} items</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {items.map((c) => (
+                        <Badge
+                          key={c.id}
+                          variant="secondary"
+                          className="cursor-default px-3 py-1.5 text-sm transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {c.name} <span className="ml-2 text-xs opacity-60">· {c.status}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             />
           </Reveal>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* PACKAGES */}
+      {data.packages.length > 0 && (
+        <section id="packages" className="section-pad bg-card/30">
+          <div className="mx-auto max-w-7xl px-4 md:px-8">
+            <Reveal className="mb-12 text-center">
+              <p className="mb-3 text-sm uppercase tracking-widest text-primary">Work With Me</p>
+              <h2 className="text-4xl font-bold md:text-5xl">Packages</h2>
+            </Reveal>
+            <Reveal>
+              <ItemCarousel
+                items={data.packages}
+                getKey={(p) => p.id}
+                ariaLabel="Packages"
+                basisClassName="basis-full sm:basis-1/2 lg:basis-1/3"
+                renderItem={(p) => <PackageCard p={p} />}
+              />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* PROJECTS / WORK SAMPLES */}
       <section id="work" className="section-pad mx-auto max-w-7xl px-4 md:px-8">
@@ -634,38 +662,34 @@ export function PortfolioSections({ data }: { data: Data }) {
       <SamplePreviewDialog project={previewProject} onClose={() => setPreviewProject(null)} />
 
       {/* BRANDS */}
-      <section id="brands" className="section-pad bg-card/30">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <Reveal className="mb-12 text-center">
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Trusted By</p>
-            <h2 className="text-4xl font-bold md:text-5xl">Brands</h2>
-          </Reveal>
-          <Reveal>
-            <ItemCarousel
-              items={data.brands}
-              getKey={(b) => b.id}
-              ariaLabel="Brands"
-              basisClassName="basis-full sm:basis-1/2 lg:basis-1/4"
-              renderItem={(b) => <BrandCard b={b} />}
-            />
-          </Reveal>
-        </div>
-      </section>
+      {data.brands.length > 0 && (
+        <section id="brands" className="section-pad bg-card/30">
+          <div className="mx-auto max-w-7xl px-4 md:px-8">
+            <Reveal className="mb-12 text-center">
+              <p className="mb-3 text-sm uppercase tracking-widest text-primary">Trusted By</p>
+              <h2 className="text-4xl font-bold md:text-5xl">Brands</h2>
+            </Reveal>
+            <Reveal>
+              <ItemCarousel
+                items={data.brands}
+                getKey={(b) => b.id}
+                ariaLabel="Brands"
+                basisClassName="basis-full sm:basis-1/2 lg:basis-1/4"
+                renderItem={(b) => <BrandCard b={b} />}
+              />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* TESTIMONIALS */}
-      <section id="testimonials" className="section-pad relative mx-auto max-w-6xl px-4 md:px-8">
-        <DepthField variant="b" />
-        <Reveal className="mb-12 text-center">
-          <p className="mb-3 text-sm uppercase tracking-widest text-primary">Client Reviews</p>
-          <h2 className="text-4xl font-bold md:text-5xl">What Clients Say</h2>
-        </Reveal>
-        {data.testimonials.length === 0 ? (
-          <Card className="border-dashed border-border/60">
-            <CardContent className="p-12 text-center text-muted-foreground">
-              {site.reviews_empty ?? "Reviews coming soon."}
-            </CardContent>
-          </Card>
-        ) : (
+      {data.testimonials.length > 0 && (
+        <section id="testimonials" className="section-pad relative mx-auto max-w-6xl px-4 md:px-8">
+          <DepthField variant="b" />
+          <Reveal className="mb-12 text-center">
+            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Client Reviews</p>
+            <h2 className="text-4xl font-bold md:text-5xl">What Clients Say</h2>
+          </Reveal>
           <Reveal>
             <ItemCarousel
               items={data.testimonials}
@@ -675,51 +699,55 @@ export function PortfolioSections({ data }: { data: Data }) {
               renderItem={(t) => <TestimonialCard t={t} />}
             />
           </Reveal>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* PROCESS */}
-      <section id="process" className="section-pad bg-card/30">
-        <div className="mx-auto max-w-6xl px-4 md:px-8">
-          <Reveal className="mb-12 text-center">
-            <p className="mb-3 text-sm uppercase tracking-widest text-primary">How I Work</p>
-            <h2 className="text-4xl font-bold md:text-5xl">Process</h2>
-          </Reveal>
-          <div className="grid gap-6 md:grid-cols-5">
-            {data.process_steps.map((step, i) => (
-              <Reveal key={step.id} delay={i * 100}>
-                <div className="group relative">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground transition-all duration-300 group-hover:scale-110 group-hover:shadow-[var(--shadow-glow)]">
-                    {i + 1}
+      {data.process_steps.length > 0 && (
+        <section id="process" className="section-pad bg-card/30">
+          <div className="mx-auto max-w-6xl px-4 md:px-8">
+            <Reveal className="mb-12 text-center">
+              <p className="mb-3 text-sm uppercase tracking-widest text-primary">How I Work</p>
+              <h2 className="text-4xl font-bold md:text-5xl">Process</h2>
+            </Reveal>
+            <div className="grid gap-6 md:grid-cols-5">
+              {data.process_steps.map((step, i) => (
+                <Reveal key={step.id} delay={i * 100}>
+                  <div className="group relative">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground transition-all duration-300 group-hover:scale-110 group-hover:shadow-[var(--shadow-glow)]">
+                      {i + 1}
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground">{step.description}</p>
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
-                </div>
-              </Reveal>
-            ))}
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* FAQ */}
-      <section id="faq" className="section-pad mx-auto max-w-3xl px-4 md:px-8">
-        <Reveal className="mb-12 text-center">
-          <p className="mb-3 text-sm uppercase tracking-widest text-primary">Questions</p>
-          <h2 className="text-4xl font-bold md:text-5xl">FAQ</h2>
-        </Reveal>
-        <Accordion type="single" collapsible className="w-full">
-          {data.faqs.map((f, i) => (
-            <Reveal key={f.id} delay={i * 60}>
-              <AccordionItem value={f.id}>
-                <AccordionTrigger className="text-left text-lg hover:text-primary">
-                  {f.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{f.answer}</AccordionContent>
-              </AccordionItem>
-            </Reveal>
-          ))}
-        </Accordion>
-      </section>
+      {data.faqs.length > 0 && (
+        <section id="faq" className="section-pad mx-auto max-w-3xl px-4 md:px-8">
+          <Reveal className="mb-12 text-center">
+            <p className="mb-3 text-sm uppercase tracking-widest text-primary">Questions</p>
+            <h2 className="text-4xl font-bold md:text-5xl">FAQ</h2>
+          </Reveal>
+          <Accordion type="single" collapsible className="w-full">
+            {data.faqs.map((f, i) => (
+              <Reveal key={f.id} delay={i * 60}>
+                <AccordionItem value={f.id}>
+                  <AccordionTrigger className="text-left text-lg hover:text-primary">
+                    {f.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">{f.answer}</AccordionContent>
+                </AccordionItem>
+              </Reveal>
+            ))}
+          </Accordion>
+        </section>
+      )}
 
       {/* CONTACT */}
       <section id="contact" className="section-pad relative bg-card/30">
@@ -739,22 +767,23 @@ export function PortfolioSections({ data }: { data: Data }) {
                   <Mail className="h-5 w-5 text-primary" /> {contact.email}
                 </a>
               )}
-              {contact.phone && (
+              {phoneLink && (
                 <a
-                  href={`tel:${contact.phone.replace(/\s/g, "")}`}
+                  href={phoneLink}
                   className="flex items-center gap-3 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <Phone className="h-5 w-5 text-primary" /> {contact.phone}
+                  <Phone className="h-5 w-5 text-primary" /> {phoneDisplay(contact.phone)}
                 </a>
               )}
-              {contact.whatsapp && (
+              {whatsappLink && (
                 <a
-                  href={`https://wa.me/${contact.whatsapp.replace(/\D/g, "")}`}
+                  href={whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <MessageCircle className="h-5 w-5 text-primary" /> WhatsApp
+                  <MessageCircle className="h-5 w-5 text-primary" /> WhatsApp{" "}
+                  {phoneDisplay(contact.whatsapp)}
                 </a>
               )}
             </Reveal>
