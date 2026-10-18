@@ -8,6 +8,13 @@
       "when": 1792323480962,
       "tag": "0000_media_bucket_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792323627348,
+      "tag": "0001_add_niches_page_views_likes",
+      "breakpoints": true
     }
   ]
 }
