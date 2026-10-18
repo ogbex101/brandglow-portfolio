@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792323480962,
+      "tag": "0000_media_bucket_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792323627348,
+      "tag": "0001_add_niches_page_views_likes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792324028281,
+      "tag": "0002_media_policies_reapply",
+      "breakpoints": true
+    }
+  ]
+}
