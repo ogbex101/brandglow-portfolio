@@ -12,13 +12,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 
 export interface FieldConfig {
   key: string;
   label: string;
-  type: "text" | "textarea" | "number" | "boolean" | "list";
+  type: "text" | "textarea" | "number" | "boolean" | "list" | "image";
   placeholder?: string;
   defaultValue?: any;
 }
@@ -246,6 +247,15 @@ export function CollectionEditor({
                     <Switch
                       checked={!!form[field.key]}
                       onCheckedChange={(v) => setForm({ ...form, [field.key]: v })}
+                    />
+                  </div>
+                ) : field.type === "image" ? (
+                  <div className="mt-1">
+                    <MediaUploadField
+                      folder={table}
+                      accept="image/*"
+                      value={form[field.key] ?? ""}
+                      onChange={(url) => setForm({ ...form, [field.key]: url })}
                     />
                   </div>
                 ) : field.type === "textarea" || field.type === "list" ? (

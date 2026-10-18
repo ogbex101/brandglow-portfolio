@@ -151,7 +151,7 @@ const collectionConfigs: Record<
     fields: [
       { key: "name", label: "Name", type: "text" },
       { key: "description", label: "Description", type: "textarea" },
-      { key: "logo_url", label: "Logo URL", type: "text" },
+      { key: "logo_url", label: "Logo", type: "image" },
       { key: "case_study_enabled", label: "Case study enabled", type: "boolean" },
     ],
   },
@@ -165,7 +165,7 @@ const collectionConfigs: Record<
       { key: "role", label: "Role", type: "text" },
       { key: "quote", label: "Quote", type: "textarea" },
       { key: "rating", label: "Rating (1-5)", type: "number", defaultValue: 5 },
-      { key: "avatar_url", label: "Avatar URL", type: "text" },
+      { key: "avatar_url", label: "Avatar", type: "image" },
     ],
   },
   process: {

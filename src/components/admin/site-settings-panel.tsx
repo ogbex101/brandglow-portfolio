@@ -4,9 +4,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Star } from "lucide-react";
+
+type HeroMediaItem = { type: "video" | "image"; url: string; visible: boolean };
+
+/** Reads the hero media list from settings, migrating the old `videos:
+ *  string[]` shape (every entry a looping video, nothing to star) into the
+ *  new `media: {type,url,visible}[]` shape on the fly. The DB isn't touched
+ *  until the admin hits Save — this only affects what the editor shows. */
+function heroMedia(hero: Record<string, any>): HeroMediaItem[] {
+  if (Array.isArray(hero?.media)) return hero.media;
+  return (hero?.videos ?? [])
+    .filter((u: string) => u && u.trim())
+    .map((url: string) => ({ type: "video" as const, url, visible: true }));
+}
 
 export function SiteSettingsPanel() {
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -18,6 +40,10 @@ export function SiteSettingsPanel() {
     (data ?? []).forEach((r: any) => {
       m[r.key] = r.value;
     });
+    ["site", "hero", "about", "contact"].forEach((k) => {
+      if (!(k in m)) m[k] = {};
+    });
+    m.hero = { ...m.hero, media: heroMedia(m.hero) };
     setSettings(m);
     setLoading(false);
   }
@@ -28,21 +54,82 @@ export function SiteSettingsPanel() {
   async function saveSetting(key: string) {
     const { error } = await supabase
       .from("site_settings")
-      .update({ value: settings[key] })
-      .eq("key", key);
+      .upsert({ key, value: settings[key] }, { onConflict: "key" });
     if (error) toast.error(error.message);
     else toast.success("Saved.");
+  }
+
+  function setHero(patch: Record<string, any>) {
+    setSettings({ ...settings, hero: { ...settings.hero, ...patch } });
+  }
+  function setMedia(media: HeroMediaItem[]) {
+    setHero({ media });
+  }
+  function updateMediaItem(i: number, patch: Partial<HeroMediaItem>) {
+    setMedia(
+      settings.hero.media.map((m: HeroMediaItem, idx: number) =>
+        idx === i ? { ...m, ...patch } : m,
+      ),
+    );
+  }
+  function addMediaItem() {
+    setMedia([...(settings.hero.media ?? []), { type: "image", url: "", visible: true }]);
+  }
+  function removeMediaItem(i: number) {
+    setMedia(settings.hero.media.filter((_: HeroMediaItem, idx: number) => idx !== i));
+  }
+  function moveMediaItem(i: number, dir: -1 | 1) {
+    const list = [...settings.hero.media];
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    setMedia(list);
   }
 
   if (loading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />;
 
   return (
-    <Tabs defaultValue="hero">
+    <Tabs defaultValue="site">
       <TabsList>
+        <TabsTrigger value="site">Site</TabsTrigger>
         <TabsTrigger value="hero">Hero</TabsTrigger>
         <TabsTrigger value="about">About</TabsTrigger>
         <TabsTrigger value="contact">Contact</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="site" className="mt-4">
+        {settings.site && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Site</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="block text-sm">
+                Header name (shown top-left of the nav and in the footer)
+                <Input
+                  value={settings.site.name ?? ""}
+                  onChange={(e) =>
+                    setSettings({ ...settings, site: { ...settings.site, name: e.target.value } })
+                  }
+                />
+              </label>
+              <label className="block text-sm">
+                Tagline (the badge above the hero headline)
+                <Input
+                  value={settings.site.tagline ?? ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      site: { ...settings.site, tagline: e.target.value },
+                    })
+                  }
+                />
+              </label>
+              <Button onClick={() => saveSetting("site")}>Save Site</Button>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
 
       <TabsContent value="hero" className="mt-4">
         {settings.hero && (
@@ -55,12 +142,7 @@ export function SiteSettingsPanel() {
                 Headline
                 <Input
                   value={settings.hero.headline ?? ""}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      hero: { ...settings.hero, headline: e.target.value },
-                    })
-                  }
+                  onChange={(e) => setHero({ headline: e.target.value })}
                 />
               </label>
               <label className="block text-sm">
@@ -68,53 +150,114 @@ export function SiteSettingsPanel() {
                 <Textarea
                   rows={3}
                   value={settings.hero.subheading ?? ""}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      hero: { ...settings.hero, subheading: e.target.value },
-                    })
-                  }
+                  onChange={(e) => setHero({ subheading: e.target.value })}
                 />
               </label>
               <label className="block text-sm">
                 CTA text
                 <Input
                   value={settings.hero.cta ?? ""}
-                  onChange={(e) =>
-                    setSettings({ ...settings, hero: { ...settings.hero, cta: e.target.value } })
-                  }
+                  onChange={(e) => setHero({ cta: e.target.value })}
                 />
               </label>
-              <label className="block text-sm">
-                Fallback image URL
-                <Input
-                  value={settings.hero.fallback_image ?? ""}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      hero: { ...settings.hero, fallback_image: e.target.value },
-                    })
-                  }
-                />
-              </label>
+
               <div>
                 <div className="mb-1 text-sm font-medium">
-                  Video URLs (played in order, looping):
+                  Fallback image (shown only if every media item below fails to load)
                 </div>
-                {(settings.hero.videos ?? ["", "", "", ""]).map((v: string, i: number) => (
-                  <Input
-                    key={i}
-                    placeholder={`Video ${i + 1} URL`}
-                    className="mb-2"
-                    value={v}
-                    onChange={(e) => {
-                      const vids = [...(settings.hero.videos ?? [])];
-                      vids[i] = e.target.value;
-                      setSettings({ ...settings, hero: { ...settings.hero, videos: vids } });
-                    }}
-                  />
-                ))}
+                <MediaUploadField
+                  folder="hero"
+                  accept="image/*"
+                  value={settings.hero.fallback_image ?? ""}
+                  onChange={(url) => setHero({ fallback_image: url })}
+                />
               </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Hero media</div>
+                    <p className="text-xs text-muted-foreground">
+                      Mix videos and screenshots. Only starred items play in rotation on the live
+                      site — keep the rest saved here to swap in later without re-uploading.
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={addMediaItem}>
+                    <Plus className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </div>
+                {(settings.hero.media ?? []).map((item: HeroMediaItem, i: number) => (
+                  <div key={i} className="space-y-2 rounded-lg border border-border/60 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Select
+                        value={item.type}
+                        onValueChange={(v: "video" | "image") => updateMediaItem(i, { type: v })}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="video">Video</SelectItem>
+                          <SelectItem value="image">Screenshot</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-1">
+                        <div className="flex flex-col">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            disabled={i === 0}
+                            onClick={() => moveMediaItem(i, -1)}
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            disabled={i === settings.hero.media.length - 1}
+                            onClick={() => moveMediaItem(i, 1)}
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant={item.visible ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => updateMediaItem(i, { visible: !item.visible })}
+                          title={item.visible ? "Starred — shown live" : "Not shown live"}
+                        >
+                          <Star className={`h-4 w-4 ${item.visible ? "fill-current" : ""}`} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeMediaItem(i)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <MediaUploadField
+                      folder="hero"
+                      accept={item.type === "video" ? "video/*" : "image/*"}
+                      value={item.url}
+                      onChange={(url) => updateMediaItem(i, { url })}
+                    />
+                  </div>
+                ))}
+                {(settings.hero.media ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No hero media yet — add a video or screenshot.
+                  </p>
+                )}
+              </div>
+
               <Button onClick={() => saveSetting("hero")}>Save Hero</Button>
             </CardContent>
           </Card>
@@ -162,18 +305,17 @@ export function SiteSettingsPanel() {
                   }
                 />
               </label>
-              <label className="block text-sm">
-                Avatar URL
-                <Input
+              <div>
+                <div className="mb-1 text-sm font-medium">Profile picture</div>
+                <MediaUploadField
+                  folder="avatars"
+                  accept="image/*"
                   value={settings.about.avatar_url ?? ""}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      about: { ...settings.about, avatar_url: e.target.value },
-                    })
+                  onChange={(url) =>
+                    setSettings({ ...settings, about: { ...settings.about, avatar_url: url } })
                   }
                 />
-              </label>
+              </div>
               <Button onClick={() => saveSetting("about")}>Save About</Button>
             </CardContent>
           </Card>

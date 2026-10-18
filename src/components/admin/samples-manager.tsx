@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Save, Trash2, Layers, Heart } from "lucide-react";
 
@@ -458,13 +459,16 @@ export function SamplesManager() {
                   onChange={(e) => setPreview({ ...preview, live_url: e.target.value })}
                 />
               </label>
-              <label className="block text-sm">
-                Cover image URL
-                <Input
+              <div>
+                <div className="mb-1 text-sm font-medium">Cover image</div>
+                <MediaUploadField
+                  folder="projects"
+                  accept="image/*"
+                  preview={false}
                   value={preview.image_url}
-                  onChange={(e) => setPreview({ ...preview, image_url: e.target.value })}
+                  onChange={(url) => setPreview({ ...preview, image_url: url })}
                 />
-              </label>
+              </div>
               <div className="flex gap-2">
                 <Button onClick={saveImported} disabled={saving}>
                   {saving ? (

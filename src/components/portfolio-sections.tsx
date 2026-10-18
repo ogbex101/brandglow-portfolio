@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HeroVideoSequence } from "@/components/hero-video-sequence";
+import { HeroMediaSequence, type HeroMediaItem } from "@/components/hero-media-sequence";
 import { ContactForm } from "@/components/contact-form";
 import { ItemCarousel } from "@/components/carousel/item-carousel";
 import { SamplePreviewDialog, type PreviewProject } from "@/components/sample-preview-dialog";
@@ -134,15 +134,17 @@ function TiltWrapper({ children, className }: { children: React.ReactNode; class
 
 function ServiceCard({ s }: { s: any }) {
   return (
-    <Card className="card-lift group h-full border-border/60 bg-card hover:border-primary/60">
-      <CardHeader>
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
-          <DynamicIcon name={s.icon} className="h-6 w-6" />
-        </div>
-        <CardTitle className="text-xl">{s.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="text-muted-foreground">{s.description}</CardContent>
-    </Card>
+    <TiltWrapper className="h-full">
+      <Card className="card-lift group h-full border-border/60 bg-card hover:border-primary/60">
+        <CardHeader>
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+            <DynamicIcon name={s.icon} className="h-6 w-6" />
+          </div>
+          <CardTitle className="text-xl">{s.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground">{s.description}</CardContent>
+      </Card>
+    </TiltWrapper>
   );
 }
 
@@ -165,88 +167,102 @@ function SkillCard({ s, index }: { s: any; index: number }) {
 function MetricCard({ m, index }: { m: any; index: number }) {
   const hasSplit = m.open_rate || m.response_rate;
   return (
-    <Card className="card-lift h-full border-border/60 text-center">
-      <CardContent className="pt-8 pb-6">
-        {hasSplit ? (
-          <div className="flex items-center justify-center gap-6">
-            <div>
-              <div className="text-3xl font-bold md:text-4xl">
-                <AnimatedCounter
-                  className="text-gradient"
-                  value={m.open_rate || "0%"}
-                  delay={index * 90}
-                />
+    <TiltWrapper className="h-full">
+      <Card className="card-lift relative h-full overflow-hidden border-border/60 text-center">
+        {/* top accent bar */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-accent" />
+        <CardContent className="pt-10 pb-7">
+          {hasSplit ? (
+            <div className="flex items-center justify-center gap-4 sm:gap-8">
+              <div className="min-w-0">
+                <div className="whitespace-nowrap text-4xl font-bold leading-tight sm:text-5xl">
+                  <AnimatedCounter
+                    className="text-gradient"
+                    value={m.open_rate || "0%"}
+                    delay={index * 90}
+                  />
+                </div>
+                <div className="mt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Open Rate
+                </div>
               </div>
-              <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">Open</div>
+              <div className="h-14 w-px shrink-0 bg-gradient-to-b from-transparent via-border to-transparent" />
+              <div className="min-w-0">
+                <div className="whitespace-nowrap text-4xl font-bold leading-tight sm:text-5xl">
+                  <AnimatedCounter
+                    className="text-gradient"
+                    value={m.response_rate || "0%"}
+                    delay={index * 90 + 80}
+                  />
+                </div>
+                <div className="mt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Response Rate
+                </div>
+              </div>
             </div>
-            <div className="h-10 w-px bg-border/60" />
-            <div>
-              <div className="text-3xl font-bold md:text-4xl">
-                <AnimatedCounter
-                  className="text-gradient"
-                  value={m.response_rate || "0%"}
-                  delay={index * 90 + 80}
-                />
-              </div>
-              <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                Response
-              </div>
+          ) : (
+            <div className="whitespace-nowrap text-6xl font-bold leading-tight md:text-7xl">
+              {/* The gradient sits on the counter itself: on the parent, the
+                  counter's own transform layer escapes background-clip:text and
+                  the number renders invisible. */}
+              <AnimatedCounter
+                className="text-gradient"
+                value={m.metric_value}
+                delay={index * 90}
+              />
             </div>
-          </div>
-        ) : (
-          <div className="text-5xl font-bold md:text-6xl">
-            {/* The gradient sits on the counter itself: on the parent, the
-                counter's own transform layer escapes background-clip:text and
-                the number renders invisible. */}
-            <AnimatedCounter className="text-gradient" value={m.metric_value} delay={index * 90} />
-          </div>
-        )}
-        <div className="mt-3 text-sm text-muted-foreground">{m.metric_label}</div>
-        <div className="mt-1 font-medium">{m.brand_name}</div>
-      </CardContent>
-    </Card>
+          )}
+          <div className="mt-4 text-sm font-medium text-foreground/90">{m.metric_label}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{m.brand_name}</div>
+        </CardContent>
+      </Card>
+    </TiltWrapper>
   );
 }
 
 function PackageCard({ p }: { p: any }) {
   return (
-    <Card className="card-lift flex h-full flex-col border-border/60">
-      <CardHeader>
-        <CardTitle className="text-xl">{p.name}</CardTitle>
-        {p.description && <p className="text-sm text-muted-foreground">{p.description}</p>}
-      </CardHeader>
-      <CardContent className="flex-1">
-        <ul className="space-y-2">
-          {(p.features as string[]).map((f, k) => (
-            <li key={k} className="flex items-start gap-2 text-sm">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-      <div className="p-6 pt-0">
-        <Button className="w-full hover-scale" variant="outline" asChild>
-          <a href="#contact">Inquire</a>
-        </Button>
-      </div>
-    </Card>
+    <TiltWrapper className="h-full">
+      <Card className="card-lift flex h-full flex-col border-border/60">
+        <CardHeader>
+          <CardTitle className="text-xl">{p.name}</CardTitle>
+          {p.description && <p className="text-sm text-muted-foreground">{p.description}</p>}
+        </CardHeader>
+        <CardContent className="flex-1">
+          <ul className="space-y-2">
+            {(p.features as string[]).map((f, k) => (
+              <li key={k} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+        <div className="p-6 pt-0">
+          <Button className="w-full hover-scale" variant="outline" asChild>
+            <a href="#contact">Inquire</a>
+          </Button>
+        </div>
+      </Card>
+    </TiltWrapper>
   );
 }
 
 function BrandCard({ b }: { b: any }) {
   return (
-    <Card className="card-lift h-full border-border/60 text-center">
-      <CardContent className="p-6">
-        {b.logo_url && (
-          <div className="media-hover mb-4 flex h-32 items-center justify-center rounded-lg bg-background p-4">
-            <img src={b.logo_url} alt={b.name} className="max-h-full max-w-full object-contain" />
-          </div>
-        )}
-        <h3 className="mb-2 font-semibold">{b.name}</h3>
-        <p className="text-xs text-muted-foreground">{b.description}</p>
-      </CardContent>
-    </Card>
+    <TiltWrapper className="h-full">
+      <Card className="card-lift h-full border-border/60 text-center">
+        <CardContent className="p-6">
+          {b.logo_url && (
+            <div className="media-hover mb-4 flex h-32 items-center justify-center rounded-lg bg-background p-4">
+              <img src={b.logo_url} alt={b.name} className="max-h-full max-w-full object-contain" />
+            </div>
+          )}
+          <h3 className="mb-2 font-semibold">{b.name}</h3>
+          <p className="text-xs text-muted-foreground">{b.description}</p>
+        </CardContent>
+      </Card>
+    </TiltWrapper>
   );
 }
 
@@ -313,6 +329,11 @@ export function PortfolioSections({ data }: { data: Data }) {
   const about = data.settings.about ?? {};
   const contact = data.settings.contact ?? {};
   const site = data.settings.site ?? {};
+  const heroMediaList: HeroMediaItem[] = Array.isArray(hero.media)
+    ? hero.media
+    : (hero.videos ?? [])
+        .filter(Boolean)
+        .map((url: string) => ({ type: "video", url, visible: true }));
 
   // What a visitor sees: each project once, no placeholder cards, and only
   // credentials actually earned. Everything stays editable in the admin.
@@ -396,7 +417,7 @@ export function PortfolioSections({ data }: { data: Data }) {
 
       {/* HERO */}
       <section id="top" className="relative flex min-h-screen items-center overflow-hidden">
-        <HeroVideoSequence videos={hero.videos ?? []} fallbackImage={hero.fallback_image} />
+        <HeroMediaSequence media={heroMediaList} fallbackImage={hero.fallback_image} />
         <div className="relative z-10 mx-auto max-w-5xl px-4 py-32 text-center md:px-8">
           <Reveal>
             <Badge variant="secondary" className="mb-6">
@@ -439,7 +460,10 @@ export function PortfolioSections({ data }: { data: Data }) {
       </section>
 
       {/* ABOUT */}
-      <section id="about" className="section-pad relative mx-auto max-w-6xl px-4 md:px-8">
+      <section
+        id="about"
+        className="section-pad relative mx-auto max-w-6xl overflow-hidden px-4 md:px-8"
+      >
         <DepthField variant="a" />
         <div className="grid gap-14 md:grid-cols-[5fr_7fr] md:items-center">
           {about.avatar_url && (
@@ -684,7 +708,10 @@ export function PortfolioSections({ data }: { data: Data }) {
 
       {/* TESTIMONIALS */}
       {data.testimonials.length > 0 && (
-        <section id="testimonials" className="section-pad relative mx-auto max-w-6xl px-4 md:px-8">
+        <section
+          id="testimonials"
+          className="section-pad relative mx-auto max-w-6xl overflow-hidden px-4 md:px-8"
+        >
           <DepthField variant="b" />
           <Reveal className="mb-12 text-center">
             <p className="mb-3 text-sm uppercase tracking-widest text-primary">Client Reviews</p>
@@ -750,7 +777,7 @@ export function PortfolioSections({ data }: { data: Data }) {
       )}
 
       {/* CONTACT */}
-      <section id="contact" className="section-pad relative bg-card/30">
+      <section id="contact" className="section-pad relative overflow-hidden bg-card/30">
         <DepthField variant="a" />
         <div className="mx-auto max-w-5xl px-4 md:px-8">
           <Reveal className="mb-12 text-center">
