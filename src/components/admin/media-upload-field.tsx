@@ -14,6 +14,11 @@ interface Props {
   label?: string;
   /** Show a small image/video preview above the controls. */
   preview?: boolean;
+  /** Called once, only after a successful device upload (never while typing
+   *  a pasted link). Wire this to persist immediately — otherwise "Uploaded"
+   *  only updates in-memory form state and the admin still has to find and
+   *  click a separate Save button before it actually shows up anywhere. */
+  onUploaded?: (url: string) => void | Promise<void>;
 }
 
 function sanitize(name: string) {
@@ -31,6 +36,7 @@ export function MediaUploadField({
   accept = "image/*",
   label,
   preview = true,
+  onUploaded,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -46,7 +52,12 @@ export function MediaUploadField({
       if (error) throw error;
       const { data } = supabase.storage.from("media").getPublicUrl(path);
       onChange(data.publicUrl);
-      toast.success("Uploaded.");
+      if (onUploaded) {
+        await onUploaded(data.publicUrl);
+        toast.success("Uploaded and saved — live on the site now.");
+      } else {
+        toast.success("Uploaded — click Save below to publish it.");
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Upload failed");
     } finally {

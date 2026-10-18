@@ -59,31 +59,47 @@ export function SiteSettingsPanel() {
     else toast.success("Saved.");
   }
 
+  /** Writes a key straight to the DB, independent of whatever setSettings
+   *  has or hasn't flushed yet — used for actions that should take effect
+   *  immediately (an upload, a star toggle) rather than wait for the
+   *  section's manual Save button. */
+  async function persist(key: string, value: Record<string, any>) {
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({ key, value }, { onConflict: "key" });
+    if (error) toast.error(error.message);
+  }
+
   function setHero(patch: Record<string, any>) {
     setSettings({ ...settings, hero: { ...settings.hero, ...patch } });
   }
   function setMedia(media: HeroMediaItem[]) {
     setHero({ media });
   }
-  function updateMediaItem(i: number, patch: Partial<HeroMediaItem>) {
-    setMedia(
-      settings.hero.media.map((m: HeroMediaItem, idx: number) =>
-        idx === i ? { ...m, ...patch } : m,
-      ),
+  async function updateMediaItem(i: number, patch: Partial<HeroMediaItem>, save = false) {
+    const media = settings.hero.media.map((m: HeroMediaItem, idx: number) =>
+      idx === i ? { ...m, ...patch } : m,
     );
+    setMedia(media);
+    if (save) await persist("hero", { ...settings.hero, media });
   }
-  function addMediaItem() {
-    setMedia([...(settings.hero.media ?? []), { type: "image", url: "", visible: true }]);
+  async function addMediaItem() {
+    const media = [...(settings.hero.media ?? []), { type: "image", url: "", visible: true }];
+    setMedia(media);
+    await persist("hero", { ...settings.hero, media });
   }
-  function removeMediaItem(i: number) {
-    setMedia(settings.hero.media.filter((_: HeroMediaItem, idx: number) => idx !== i));
+  async function removeMediaItem(i: number) {
+    const media = settings.hero.media.filter((_: HeroMediaItem, idx: number) => idx !== i);
+    setMedia(media);
+    await persist("hero", { ...settings.hero, media });
   }
-  function moveMediaItem(i: number, dir: -1 | 1) {
+  async function moveMediaItem(i: number, dir: -1 | 1) {
     const list = [...settings.hero.media];
     const j = i + dir;
     if (j < 0 || j >= list.length) return;
     [list[i], list[j]] = [list[j], list[i]];
     setMedia(list);
+    await persist("hero", { ...settings.hero, media: list });
   }
 
   if (loading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />;
@@ -170,6 +186,7 @@ export function SiteSettingsPanel() {
                   accept="image/*"
                   value={settings.hero.fallback_image ?? ""}
                   onChange={(url) => setHero({ fallback_image: url })}
+                  onUploaded={(url) => persist("hero", { ...settings.hero, fallback_image: url })}
                 />
               </div>
 
@@ -228,7 +245,7 @@ export function SiteSettingsPanel() {
                           type="button"
                           variant={item.visible ? "default" : "outline"}
                           size="sm"
-                          onClick={() => updateMediaItem(i, { visible: !item.visible })}
+                          onClick={() => updateMediaItem(i, { visible: !item.visible }, true)}
                           title={item.visible ? "Starred — shown live" : "Not shown live"}
                         >
                           <Star className={`h-4 w-4 ${item.visible ? "fill-current" : ""}`} />
@@ -248,6 +265,7 @@ export function SiteSettingsPanel() {
                       accept={item.type === "video" ? "video/*" : "image/*"}
                       value={item.url}
                       onChange={(url) => updateMediaItem(i, { url })}
+                      onUploaded={(url) => updateMediaItem(i, { url }, true)}
                     />
                   </div>
                 ))}
@@ -314,6 +332,7 @@ export function SiteSettingsPanel() {
                   onChange={(url) =>
                     setSettings({ ...settings, about: { ...settings.about, avatar_url: url } })
                   }
+                  onUploaded={(url) => persist("about", { ...settings.about, avatar_url: url })}
                 />
               </div>
               <Button onClick={() => saveSetting("about")}>Save About</Button>
