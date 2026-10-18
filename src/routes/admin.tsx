@@ -42,7 +42,7 @@ const NAV: { group: string; items: [Tab, string][] }[] = [
   {
     group: "Site",
     items: [
-      ["site", "Hero / About / Contact"],
+      ["site", "Site, Hero, About, Contact"],
       ["niches", "Niches"],
     ],
   },
